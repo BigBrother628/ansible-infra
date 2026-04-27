@@ -1,0 +1,23 @@
+---
+- name: Init Swarm on Manager
+  docker_swarm:
+    state: present
+  when: inventory_hostname in groups['swarm_manager']
+  register: swarm_info
+
+- name: Get Join Token
+  set_fact:
+    join_token: "{{ hostvars[groups['swarm_manager'][0]]['swarm_info']['swarm_facts']['join_tokens']['worker'] }}"
+  when: inventory_hostname in groups['swarm_workers']
+
+- name: Join Workers to cluster
+  docker_swarm:
+    state: join
+    join_token: "{{ join_token }}"
+    remote_addrs: [ "{{ hostvars[groups['swarm_manager'][0]]['ansible_host'] }}" ]
+  when: inventory_hostname in groups['swarm_workers']
+
+- name: Add labels to workers
+  delegate_to: "{{ groups['swarm_manager'][0] }}"
+  command: "docker node update --label-add type=worker {{ inventory_hostname }}"
+  when: inventory_hostname in groups['swarm_workers']
