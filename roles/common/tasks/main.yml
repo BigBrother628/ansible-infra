@@ -1,0 +1,49 @@
+---
+- name: Install base software
+  apt:
+    name: "{{ required_packages }}"
+    state: present
+    update_cache: yes
+
+- name: Create admin groups
+  group:
+    name: sudo
+    state: present
+
+- name: Create admin users
+  user:
+    name: "{{ item }}"
+    groups: sudo
+    shell: /bin/bash
+  loop: "{{ admin_users }}"
+
+- name: Create technical users
+  user:
+    name: "{{ item }}"
+    shell: /usr/sbin/nologin
+  loop: "{{ tech_users }}"
+
+- name: Set authorized key from our control node
+  authorized_key:
+    user: "{{ item }}"
+    state: present
+    key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+  loop: "{{ admin_users + tech_users + ['boss'] }}"
+
+- name: Security hardening (No root, No passwords)
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: '^PermitRootLogin', line: 'PermitRootLogin no' }
+    - { regexp: '^PasswordAuthentication', line: 'PasswordAuthentication no' }
+  notify: restart ssh
+
+- name: Allow sudo without password for admins
+  lineinfile:
+    path: /etc/sudoers.d/admins
+    line: "%sudo ALL=(ALL) NOPASSWD:ALL"
+    create: yes
+    mode: '0440'
+    validate: '/usr/sbin/visudo -cf %s'

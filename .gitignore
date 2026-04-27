@@ -1,0 +1,13 @@
+*.key
+*.pem
+*.pub
+vault_pass.txt
+.vault_pass
+*.log
+*.retry
+.ansible_cache/
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.bak

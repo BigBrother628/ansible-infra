@@ -1,0 +1,8 @@
+---
+- name: MobilePark Infrastructure Deployment
+  hosts: all_servers
+  become: yes
+  roles:
+    - common
+    - docker
+    - swarm
